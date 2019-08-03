@@ -1,0 +1,93 @@
+a. load balancing : là một kỹ thuật thường được sử dụng để tối ưu hóa việc sử dụng tài nguyên, băng thông, giảm độ trễ, và tăng cường khả năng chịu lỗi. 
+
+b. load balancer : là một máy chủ được bổ sung thêm nhằm gia tăng lưu lượng truy cập để server phân phối lưu lượng này một cách hợp lý là cần thiết
+
+2. Chức năng 
+- reverse proxy
+- các yêu cầu từ client or load network hiệu quả trên nhiều server
+- đảm bảo availability và reliability cao bằng cách chỉ gửi những yêu cầu đến các server trực tuyến
+- có được sự linh hoạt khi ta thêm hoặc bớt server
+
+a. Load balancing algorithms (Methods)     
+- Round robin : yêu cầu được kết nối đến toàn server với tỷ lệ 1:1 ( fastcgi_pass, memcached_pass, uwsgi_pass, scgi_pass,grpc_pass ) ( method default )
+ cấu hình căn bản:
+        http {
+            upstream myapp1 {
+                server srv1.example.com;
+                server srv2.example.com;
+                server srv3.example.com;
+            }
+
+            server {
+                listen 80;
+                location / {
+                    proxy_pass http://myapp1;
+                }
+            }
+        }
+        
+- Least connection : tính toán xem có server nào đang làm việc quá sức thì chuyển bớt công việc sang cho server nào ít làm việc hơn ( least_conn )
+  cấu hình căn bản:
+        upstream myapp1 {
+        least_conn;
+        server srv1.example.com;
+        server srv2.example.com;
+        server srv3.example.com;
+    }
+
+
+- IP hash : thực hiện khi 1 client bắt buộc chỉ theo 1 máy chủ nào đấy thì IP của client sẽ đc làm chìa khóa băm của server đó ( ip_hash )
+- Weighted load balacing : đặt trọng trách làm việc lên máy này nhiều hơn các máy khác (default = 1, có thể tắt đi nếu gán giá trị bằng 0 )
+  cấu hình căn bản:
+        upstream myapp1 {
+        server srv1.example.com weight=3;
+        server srv2.example.com;
+        server srv3.example.com;
+    }
+    
+- Health check : kiểm tra xem có máy chủ nào báo lỗi thì nginx sẽ tìm cách ko gửi request
+đến máy chủ khác (   + max_fails : số lần thử liên tiếp ko thành công 
+   			             + fail_timeout : thời gian để max_fails )
+  cấu hình căn bản:
+        upstream myapp1 {
+        server srv1.example.com max_fails=3, fail_timeout=10s;
+        server srv2.example.com;
+        server srv3.example.com;
+    }
+                      
+b. Session persistence (duy trì phiên)
+- là sự duy trì về phía 1 server với 1 người dùng nào đấy (ví dụ nếu trong thời gian người dùng mua mà lại bị chuyển đổi sang server khác thì sẽ bị gây ra sự cố hiệu suất hoặc giao dịch vì vậy đã sinh ra Session persistence)
+- best load balancer là khi thay đổi máy chủ thì session người dùng vẫn nguyên vẹn (sử dụng memcached)
+c. Sự khác nhau giữa layer 4 ( TCP ) và 7 ( HTTP ) Load balacing
+- TCP LB : hoạt động ở lớp vận chuyển trung gian, liên quan đến việc gửi tin nhắn mà không liên quan đến nội dung của tin nhắn, TCPLB chỉ cần chuyển tiếp các network packets đến và từ upstream server mà không kiểm tra nội dung của các gói. Chúng có thể đưa ra quyết định r hạn chế bằng cách kiểm tra một vài gói đầu tiên trong luồng TCP
+- HTTP LB : hoạt động ở lớp ứng dụng cấp cao, deals với những nội dung thực tế của mỗi thông báo. HTTPLB chấm dứt lưu lượng mạng và đọc tin nhắn bên trong. Nó có thể đưa ra quyết định dựa trên nội dung của tin nhắn (ví dụ: URL hoặc cookie). Sau đó, nó tạo một kết nối TCP mới đến upstream server ( hoặc sử dụng lại một máy chủ hiện có, bằng HTTP keepalive ) và viết requests đến server.
+- Benefits of Layer 7 Load Balancing :  is more CPU-intensive than packet-based Layer 4 load balancing, but rarely causes degraded performance on a modern server. Đưa ra những quyết định thông minh hơn, áp dụng tối ưu và change content( compress and encyption ). Nó sử dụng buffering để kết nối với các upstream server cải thiện perfomance.
+
+e. hardware load balancer 
+- như cái tên của nó thì nó là 1 phần cứng về load balancer được cung cấp bởi 1 số nhà như Cisco, F4, Citrix, ….  cầu hình sẽ được thông qua giao diện web hoặc console
+- Ưu điểm :
++ được các nhà phát triển làm cho nên sẽ tốt hơn rất nhiều
++ có được chỗ dựa từ 1 nhà cung cấp cụ thể nên khi cần có thể gọi họ hỗ trợ
+- Nhược điểm :
++ chỉ có thể làm việc với console hoặc API được cho phép
++ chi phí tốn kém ( do cần phải được tư vấn để hiểu được sắc thái của nó )
++ cần phải có 1 trung tâm kiểm soát ( đang có khuynh hướng theo cloud và nếu bài toán này đc giải quyết thì sẽ là hết chỗ cho hardware )
+
+Chú Thích
+a. Unix Socket : là một điểm giao tiếp để trao đổi dữ liệu giữa các ứng dụng trên cùng một máy tính. Khác với giao thức TCP/IP thực hiện ở giao thức mạng, Unix socket thực hiện ở nhân hệ điều hành, nhờ vậy có thể tránh được cách bước như kiểm tra hoặc routing, đem lại tốc độ kết nối nhanh hơn và nhẹ hơn so với TCP/IP.
+- Ưu điểm : Unix socket giúp tốc độ truy cập MySQL tăng 30-50%, giảm latency từ 60ms xuống còn 5ms, PostgreSQL tăng hơn 30%, Redis tăng 50%,… so với TCP/IP.
+- Nhược điểm : 2 ứng dụng chỉ có thể kết nối đến nhau trên cùng 1 server 
+b. CGI : Là chữ viết tắt của “Common Gateway Interface”. Đây là một phương pháp cho phép giao tiếp giữa server và chương trình nhờ các định dạng đặc tả thông tin - là viết chương trình nhận và truyền dữ liệu qua Internet tới WWW server. Chương trình CGI sử dụng dữ liệu đó và gửi đáp ứng HTML trở lại máy khách.
+- FastCGI : là một giao thức phát triển mở rộng từ CGI, mục đích chính của FastCGI được thiết kế ra  là để Webserver tối ưu trong việc xử lý, giúp máy chủ có thể xử lí nhiều yêu cầu từ trang web trong cùng một lúc.
+- PHP-FPM(FastCGI Process Manager) : Một sự thay thế PHP FastCGI để thực hiện một số tính năng bổ sung hữu ích cho các trang web có kích thước bất kỳ, đặc biệt là các trang có lượng truy cập lớn.
+d. grpc : là một giao thức gọi thủ tục từ xa, được sử dụng để liên lạc giữa các ứng dụng khách và máy chủ
+d. upstream : mỗi upstream sẽ được định nghĩa bởi các server directive - được cung cấp có thể là Unix socket, IP address, DNS records.
+
+
+
+N G I N X +
+- Giới hạn kết nối với máy chủ
+- Kiểm soát độ phân giải DNS nâng cao
+- Khả năng tăng dần kết nối tới máy chủ sau khi khởi động.
+- least_time algorithm LB
+…………..
