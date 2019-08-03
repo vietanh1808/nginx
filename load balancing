@@ -37,6 +37,13 @@ a. Load balancing algorithms (Methods)
 
 
 - IP hash : thực hiện khi 1 client bắt buộc chỉ theo 1 máy chủ nào đấy thì IP của client sẽ đc làm chìa khóa băm của server đó ( ip_hash )
+        upstream myapp1 {
+        ip_hash;
+        server srv1.example.com;
+        server srv2.example.com;
+        server srv3.example.com;
+    }
+
 - Weighted load balacing : đặt trọng trách làm việc lên máy này nhiều hơn các máy khác (default = 1, có thể tắt đi nếu gán giá trị bằng 0 )
   cấu hình căn bản:
         upstream myapp1 {
@@ -50,7 +57,14 @@ a. Load balancing algorithms (Methods)
    			             + fail_timeout : thời gian để max_fails )
   cấu hình căn bản:
         upstream myapp1 {
-        server srv1.example.com max_fails=3, fail_timeout=10s;
+        server srv1.example.com max_fails=3, fail_timeout=5s;
+        server srv2.example.com;
+        server srv3.example.com;
+    }
+- Server slow start: máy chủ sẽ đc tăng dần sau 1 khoảng thời gian được thiết lập
+cấu hình cản bản:
+        upstream myapp1 {
+        server srv1.example.com slow_start=30s;
         server srv2.example.com;
         server srv3.example.com;
     }
@@ -61,7 +75,7 @@ b. Session persistence (duy trì phiên)
 c. Sự khác nhau giữa layer 4 ( TCP ) và 7 ( HTTP ) Load balacing
 - TCP LB : hoạt động ở lớp vận chuyển trung gian, liên quan đến việc gửi tin nhắn mà không liên quan đến nội dung của tin nhắn, TCPLB chỉ cần chuyển tiếp các network packets đến và từ upstream server mà không kiểm tra nội dung của các gói. Chúng có thể đưa ra quyết định r hạn chế bằng cách kiểm tra một vài gói đầu tiên trong luồng TCP
 - HTTP LB : hoạt động ở lớp ứng dụng cấp cao, deals với những nội dung thực tế của mỗi thông báo. HTTPLB chấm dứt lưu lượng mạng và đọc tin nhắn bên trong. Nó có thể đưa ra quyết định dựa trên nội dung của tin nhắn (ví dụ: URL hoặc cookie). Sau đó, nó tạo một kết nối TCP mới đến upstream server ( hoặc sử dụng lại một máy chủ hiện có, bằng HTTP keepalive ) và viết requests đến server.
-- Benefits of Layer 7 Load Balancing :  is more CPU-intensive than packet-based Layer 4 load balancing, but rarely causes degraded performance on a modern server. Đưa ra những quyết định thông minh hơn, áp dụng tối ưu và change content( compress and encyption ). Nó sử dụng buffering để kết nối với các upstream server cải thiện perfomance.
+- Benefits of Layer 7 Load Balancing : Đưa ra những quyết định thông minh hơn, áp dụng tối ưu và change content( compress and encyption ). Nó sử dụng buffering để kết nối với các upstream server cải thiện perfomance.
 
 e. hardware load balancer 
 - như cái tên của nó thì nó là 1 phần cứng về load balancer được cung cấp bởi 1 số nhà như Cisco, F4, Citrix, ….  cầu hình sẽ được thông qua giao diện web hoặc console
@@ -90,4 +104,6 @@ N G I N X +
 - Kiểm soát độ phân giải DNS nâng cao
 - Khả năng tăng dần kết nối tới máy chủ sau khi khởi động.
 - least_time algorithm LB
+- sticky (enable session persistant)
+- limiting the server connection
 …………..
