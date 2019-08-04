@@ -52,30 +52,34 @@ a. Load balancing algorithms (Methods)
         server srv3.example.com;
     }
     
-- Health check : kiểm tra xem có máy chủ nào báo lỗi thì nginx sẽ tìm cách ko gửi request
-đến máy chủ khác (   + max_fails : số lần thử liên tiếp ko thành công 
-   			             + fail_timeout : thời gian để max_fails )
+- Health check : kiểm tra tình trạng sức khỏe của các máy chủ 
+( + max_fails : số lần thử liên tiếp ko thành công  
+  + fail_timeout : thời gian để max_fails )
   cấu hình căn bản:
         upstream myapp1 {
         server srv1.example.com max_fails=3, fail_timeout=5s;
         server srv2.example.com;
         server srv3.example.com;
     }
-- Server slow start: máy chủ sẽ đc tăng dần sau 1 khoảng thời gian được thiết lập
+- keepalive: 
+- Server slow start: máy chủ sẽ đc tăng dần request sau 1 khoảng thời gian được thiết lập
 cấu hình cản bản:
         upstream myapp1 {
         server srv1.example.com slow_start=30s;
         server srv2.example.com;
         server srv3.example.com;
     }
-                      
+<!> có thể kết hợp các thuật toán với nhau:
+  - round robin & weight: 
+        upstream myapp1 {
+        server srv1.example.com weight=3;
+        server srv2.example.com;
+        server srv3.example.com;
+    }
+                  
 b. Session persistence (duy trì phiên)
 - là sự duy trì về phía 1 server với 1 người dùng nào đấy (ví dụ nếu trong thời gian người dùng mua mà lại bị chuyển đổi sang server khác thì sẽ bị gây ra sự cố hiệu suất hoặc giao dịch vì vậy đã sinh ra Session persistence)
 - best load balancer là khi thay đổi máy chủ thì session người dùng vẫn nguyên vẹn (sử dụng memcached)
-c. Sự khác nhau giữa layer 4 ( TCP ) và 7 ( HTTP ) Load balacing
-- TCP LB : hoạt động ở lớp vận chuyển trung gian, liên quan đến việc gửi tin nhắn mà không liên quan đến nội dung của tin nhắn, TCPLB chỉ cần chuyển tiếp các network packets đến và từ upstream server mà không kiểm tra nội dung của các gói. Chúng có thể đưa ra quyết định r hạn chế bằng cách kiểm tra một vài gói đầu tiên trong luồng TCP
-- HTTP LB : hoạt động ở lớp ứng dụng cấp cao, deals với những nội dung thực tế của mỗi thông báo. HTTPLB chấm dứt lưu lượng mạng và đọc tin nhắn bên trong. Nó có thể đưa ra quyết định dựa trên nội dung của tin nhắn (ví dụ: URL hoặc cookie). Sau đó, nó tạo một kết nối TCP mới đến upstream server ( hoặc sử dụng lại một máy chủ hiện có, bằng HTTP keepalive ) và viết requests đến server.
-- Benefits of Layer 7 Load Balancing : Đưa ra những quyết định thông minh hơn, áp dụng tối ưu và change content( compress and encyption ). Nó sử dụng buffering để kết nối với các upstream server cải thiện perfomance.
 
 e. hardware load balancer 
 - như cái tên của nó thì nó là 1 phần cứng về load balancer được cung cấp bởi 1 số nhà như Cisco, F4, Citrix, ….  cầu hình sẽ được thông qua giao diện web hoặc console
@@ -94,8 +98,12 @@ a. Unix Socket : là một điểm giao tiếp để trao đổi dữ liệu gi�
 b. CGI : Là chữ viết tắt của “Common Gateway Interface”. Đây là một phương pháp cho phép giao tiếp giữa server và chương trình nhờ các định dạng đặc tả thông tin - là viết chương trình nhận và truyền dữ liệu qua Internet tới WWW server. Chương trình CGI sử dụng dữ liệu đó và gửi đáp ứng HTML trở lại máy khách.
 - FastCGI : là một giao thức phát triển mở rộng từ CGI, mục đích chính của FastCGI được thiết kế ra  là để Webserver tối ưu trong việc xử lý, giúp máy chủ có thể xử lí nhiều yêu cầu từ trang web trong cùng một lúc.
 - PHP-FPM(FastCGI Process Manager) : Một sự thay thế PHP FastCGI để thực hiện một số tính năng bổ sung hữu ích cho các trang web có kích thước bất kỳ, đặc biệt là các trang có lượng truy cập lớn.
-d. grpc : là một giao thức gọi thủ tục từ xa, được sử dụng để liên lạc giữa các ứng dụng khách và máy chủ
+c. grpc : là một giao thức gọi thủ tục từ xa, được sử dụng để liên lạc giữa các ứng dụng khách và máy chủ
 d. upstream : mỗi upstream sẽ được định nghĩa bởi các server directive - được cung cấp có thể là Unix socket, IP address, DNS records.
+e. Sự khác nhau giữa layer 4 ( TCP ) và 7 ( HTTP ) Load balacing
+- TCP LB : hoạt động ở lớp vận chuyển trung gian, liên quan đến việc gửi tin nhắn mà không liên quan đến nội dung của tin nhắn, TCPLB chỉ cần chuyển tiếp các network packets đến và từ upstream server mà không kiểm tra nội dung của các gói. Chúng có thể đưa ra quyết định r hạn chế bằng cách kiểm tra một vài gói đầu tiên trong luồng TCP
+- HTTP LB : hoạt động ở lớp ứng dụng cấp cao, deals với những nội dung thực tế của mỗi thông báo. HTTPLB chấm dứt lưu lượng mạng và đọc tin nhắn bên trong. Nó có thể đưa ra quyết định dựa trên nội dung của tin nhắn (ví dụ: URL hoặc cookie). Sau đó, nó tạo một kết nối TCP mới đến upstream server ( hoặc sử dụng lại một máy chủ hiện có, bằng HTTP keepalive ) và viết requests đến server.
+- Benefits of Layer 7 Load Balancing : Đưa ra những quyết định thông minh hơn, áp dụng tối ưu và change content( compress and encyption ). Nó sử dụng buffering để kết nối với các upstream server cải thiện perfomance.
 
 
 
@@ -104,6 +112,7 @@ N G I N X +
 - Kiểm soát độ phân giải DNS nâng cao
 - Khả năng tăng dần kết nối tới máy chủ sau khi khởi động.
 - least_time algorithm LB
-- sticky (enable session persistant)
+- sticky (enable session persistence)
 - limiting the server connection
 …………..
+demo hiểu rõ hơn về các thuật toán: https://www.youtube.com/watch?v=iqOTT7_7qXY
