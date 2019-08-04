@@ -26,7 +26,7 @@ a. Load balancing algorithms (Methods)
             }
         }
         
-- Least connection : tính toán xem có server nào đang làm việc quá sức thì chuyển bớt công việc sang cho server nào ít làm việc hơn ( least_conn )
+- Least connection : tính toán xem có server nào đang làm việc nhiều hơn thì chuyển bớt công việc sang cho server nào ít làm việc hơn ( least_conn )
   cấu hình căn bản:
         upstream myapp1 {
         least_conn;
